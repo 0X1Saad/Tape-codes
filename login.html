@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in - Edge Tapes</title>
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-body">
+
+  <main class="login-box">
+    <div class="login-head">
+      <h1>EDGE TAPES</h1>
+      <p>SIGN IN</p>
+    </div>
+
+    <form id="loginForm" autocomplete="off">
+      <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" required autocomplete="username">
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" required autocomplete="current-password">
+      </div>
+
+      <p class="msg" id="msg" role="alert" hidden></p>
+
+      <button type="submit" class="btn btn-solid btn-full" id="loginBtn">LOGIN</button>
+    </form>
+
+    <p class="login-note">You stay signed in on this device for 30 days so the app can open offline.</p>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="login.js"></script>
+</body>
+</html>

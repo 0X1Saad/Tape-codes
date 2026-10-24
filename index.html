@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edge Tapes Inventory</title>
+  <meta name="theme-color" content="#000000">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    // Access guard: no saved sign-in on this device -> go to login
+    (function () {
+      var t = "";
+      try { t = localStorage.getItem("edge_tapes_token") || ""; } catch (e) {}
+      if (!t) location.replace("login.html");
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- TOP BAR: search is always at the top -->
+  <header class="top">
+    <div class="wrap top-row">
+      <h1 class="brand">EDGE TAPES</h1>
+      <div class="searchbox">
+        <input type="text" id="fSearch" placeholder="Search a code (looks through ALL pages)" autocomplete="off" aria-label="Search code">
+        <button type="button" class="clear" id="clearSearch" aria-label="Clear search" hidden>&times;</button>
+      </div>
+      <button type="button" class="btn btn-add" id="addBtn">+ ADD<span class="hide-sm">&nbsp;NEW TAPE</span></button>
+      <button type="button" class="btn btn-ghost" id="logoutBtn">LOGOUT</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <p class="result-line" id="resultLine"></p>
+
+    <!-- SYNC STATUS -->
+    <section class="syncbar" aria-label="Connection and sync">
+      <div class="sync-item"><span class="dot" id="netDot"></span><strong id="netState">ONLINE</strong></div>
+      <div class="sync-item" id="pendingState">All changes saved</div>
+      <div class="sync-item" id="lastSync">Last sync: never</div>
+      <div class="sync-item" id="appState">Offline app: checking</div>
+      <button type="button" class="btn" id="syncBtn">SYNC NOW</button>
+    </section>
+
+    <p class="banner" id="authBanner" role="alert" hidden>
+      Your sign-in has ended, so changes cannot be sent. Everything is still saved on this device.
+      <a href="login.html">SIGN IN AGAIN</a>
+    </p>
+    <p class="banner" id="rejectBanner" role="alert" hidden></p>
+
+    <!-- SUMMARY -->
+    <section class="stats" aria-label="Summary">
+      <div class="stat stat-invert">
+        <span class="stat-label">Total Rolls</span>
+        <span class="stat-value" id="sRolls">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Codes</span>
+        <span class="stat-value" id="sCodes">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Glass</span>
+        <span class="stat-value" id="sGlass">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Matt</span>
+        <span class="stat-value" id="sMatt">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Low / Out</span>
+        <span class="stat-value" id="sLow">0</span>
+        <span class="stat-sub" id="sLowSub">0 out of stock</span>
+      </div>
+    </section>
+
+    <!-- FILTERS -->
+    <section class="toolbar" aria-label="Filters">
+      <div class="field">
+        <label for="fType">Type</label>
+        <select id="fType"><option>All</option><option>Glass</option><option>Matt</option></select>
+      </div>
+      <div class="field">
+        <label for="fSize">Size</label>
+        <select id="fSize"><option>All</option></select>
+      </div>
+      <div class="field">
+        <label for="fAvail">Available</label>
+        <select id="fAvail"><option>All</option><option>Yes</option><option>No</option></select>
+      </div>
+      <div class="field">
+        <label for="fStock">Stock</label>
+        <select id="fStock">
+          <option value="All">All</option>
+          <option value="Low">Low (3 or less)</option>
+          <option value="Out">Out of stock</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="fDup">Duplicates</label>
+        <select id="fDup">
+          <option value="All">All</option>
+          <option value="Dup">Same code+type+size</option>
+          <option value="Exact">Exact copies</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="fSort">Sort</label>
+        <select id="fSort">
+          <option value="code">Code</option>
+          <option value="qtyLow">Quantity: low to high</option>
+          <option value="qtyHigh">Quantity: high to low</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="fStep">+/- step</label>
+        <select id="fStep"><option>1</option><option>2</option><option>5</option><option>10</option></select>
+      </div>
+      <button type="button" class="btn export" id="exportBtn">EXPORT CSV</button>
+    </section>
+
+    <!-- TABLE -->
+    <section class="table-wrap">
+      <table id="tapeTable">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Type</th>
+            <th>Size</th>
+            <th class="num">Qty</th>
+            <th>Available</th>
+            <th class="act-col">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tapeBody"></tbody>
+      </table>
+      <p class="empty" id="emptyMsg" hidden></p>
+    </section>
+
+    <!-- PAGES -->
+    <div class="pager-bar">
+      <span id="pagerInfo"></span>
+      <nav class="pager-nav" id="pagerNav" aria-label="Pages"></nav>
+      <label class="pager-size">Rows
+        <select id="pageSize"><option>25</option><option>50</option><option>100</option></select>
+      </label>
+    </div>
+
+  </main>
+
+  <footer class="foot">
+    <div class="wrap">Saved on this device first, then synced to the server when the internet is available.</div>
+  </footer>
+
+  <!-- ADD / EDIT POP-UP -->
+  <dialog class="modal" id="tapeDialog" aria-labelledby="dlgTitle">
+    <form id="tapeForm" autocomplete="off" novalidate>
+      <input type="hidden" id="tId">
+      <div class="modal-head">
+        <h2 id="dlgTitle">ADD NEW TAPE</h2>
+        <button type="button" class="x" id="dlgClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="two">
+          <div class="field">
+            <label for="tCode">Code</label>
+            <input type="text" id="tCode" maxlength="30" placeholder="e.g. 4005">
+          </div>
+          <div class="field">
+            <label for="tType">Type</label>
+            <select id="tType"><option value="Glass">Glass</option><option value="Matt">Matt</option></select>
+          </div>
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="tSize">Size</label>
+            <input type="text" id="tSize" list="sizeList" maxlength="20" value="1*20">
+            <datalist id="sizeList"><option value="1*20"></option><option value="1*40"></option></datalist>
+          </div>
+          <div class="field">
+            <label for="tQty">Quantity (rolls)</label>
+            <input type="number" id="tQty" min="0" step="1" value="0" inputmode="numeric">
+          </div>
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="tAvail">Available</label>
+            <select id="tAvail"><option value="Yes">Yes</option><option value="No">No</option></select>
+          </div>
+          <div class="field">
+            <label for="tNotes">Notes (optional)</label>
+            <input type="text" id="tNotes" maxlength="300" placeholder="Any extra detail">
+          </div>
+        </div>
+        <p class="msg" id="dlgMsg" role="alert" hidden></p>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="dlgCancel">CANCEL</button>
+        <button type="submit" class="btn btn-solid" id="dlgSave">ADD TAPE</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- CONFIRM POP-UP -->
+  <dialog class="modal small" id="confirmDialog" aria-labelledby="cfTitle">
+    <div class="modal-head"><h2 id="cfTitle">ARE YOU SURE?</h2></div>
+    <div class="modal-body"><p id="cfText"></p></div>
+    <div class="modal-foot">
+      <button type="button" class="btn" id="cfCancel">CANCEL</button>
+      <button type="button" class="btn btn-solid" id="cfOk">YES</button>
+    </div>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="db.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
